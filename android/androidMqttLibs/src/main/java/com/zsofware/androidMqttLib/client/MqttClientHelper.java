@@ -16,6 +16,20 @@ public class MqttClientHelper {
 
     }
 
+    public interface OnConnectListener {
+        void connectResult(boolean result);
+    }
+    private OnConnectListener onConnectListener;
+    public void setOnConnectListener(OnConnectListener listener) {
+        onConnectListener = listener;
+    }
+
+    public void setConnectResult(boolean result) {
+        if(onConnectListener != null) {
+            onConnectListener.connectResult(result);
+        }
+    }
+
     public synchronized static MqttClientHelper getInstance() {
         if(instance == null) {
             instance = new MqttClientHelper();

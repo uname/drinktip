@@ -140,6 +140,7 @@ public class MqttService extends Service implements MqttCallback {
 					mClient.connect(mOpts);
 					mClient.subscribe(subject, qos);
 					mClient.setCallback(MqttService.this);
+					MqttClientHelper.getInstance().setConnectResult(true);
 					mStarted = true; // Service is now connected
 					Log.i(DEBUG_TAG,
 							"Successfully connected and subscribed starting keep alives");
@@ -147,6 +148,7 @@ public class MqttService extends Service implements MqttCallback {
 				} catch (Exception e) {
 					e.printStackTrace();
 					mStarted = false;
+					MqttClientHelper.getInstance().setConnectResult(false);
 				} finally {
 					// 判断是否连接上服务器
 					if (!mClient.isConnected()) {
