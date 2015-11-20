@@ -4,16 +4,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Locale;
 
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
-import org.eclipse.paho.client.mqttv3.MqttDefaultFilePersistence;
+//import org.eclipse.paho.client.mqttv3.MqttDefaultFilePersistence;
 import org.eclipse.paho.client.mqttv3.MqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.MqttPersistenceException;
 import org.eclipse.paho.client.mqttv3.MqttTopic;
-import org.eclipse.paho.client.mqttv3.internal.MemoryPersistence;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import org.eclipse.paho.client.mqttv3.persist.MqttDefaultFilePersistence;
+//import org.eclipse.paho.client.mqttv3.internal.MemoryPersistence;
 
 import android.app.Service;
 import android.content.Context;
@@ -31,6 +34,7 @@ import android.util.Log;
 
 import com.alibaba.fastjson.JSON;
 import com.zsofware.androidMqttLib.app.MqttApp;
+import com.zsofware.androidMqttLib.client.MqttClientHelper;
 import com.zsofware.androidMqttLib.entry.SubscribeEntry;
 import com.zsofware.androidMqttLib.utils.ClassHelper;
 import com.zsofware.androidMqttLib.utils.StringHelper;
@@ -38,7 +42,7 @@ import com.zsofware.androidMqttLib.utils.StringHelper;
 public class MqttService extends Service implements MqttCallback {
 	private static String				DEBUG_TAG							= "MqttService";
 
-	public static final String			FIELD_USERNAME						= "USERNAME";					// 用户名
+    public static final String			FIELD_USERNAME						= "USERNAME";					// 用户名
 	public static final String			FIELD_BROKER						= "BROKER";					// mqtt
 	public static final String			FIELD_PASSWORD						= "PASSWORD";					// 服务器地址
 	public static final String			FIELD_PROJECT						= "PROJECT";					// 项目名称
@@ -48,8 +52,8 @@ public class MqttService extends Service implements MqttCallback {
 	private static final String			FIELD_RECEIVE_CALLBACK_CLASSNAME	= "RECEIVE_CALLBACK_CLASSNAME";
 
 	private static final String			MQTT_THREAD_NAME					= "MqttService_connect_thread"; // 主线程ID
-	private MqttDefaultFilePersistence	mDataStore;
-	private MemoryPersistence			mMemStore;
+	private MqttDefaultFilePersistence mDataStore;
+	private MemoryPersistence mMemStore;
 	private MqttConnectOptions			mOpts;
 	private static final String			DEVICE_ID_FORMAT					= "%s_%s";						// 设备ID
 	private static final String			MQTT_URL_FORMAT						= "tcp://%s:%d";
@@ -282,7 +286,7 @@ public class MqttService extends Service implements MqttCallback {
 		try {
 			mDataStore = new MqttDefaultFilePersistence(getCacheDir()
 					.getAbsolutePath());
-		} catch (MqttPersistenceException e) {
+		} catch (Exception e) {
 			mDataStore = null;
 			mMemStore = new MemoryPersistence();
 		}
@@ -297,17 +301,18 @@ public class MqttService extends Service implements MqttCallback {
 
 		Log.i(DEBUG_TAG, "Connect url:" + url);
 
-		try {
-			if (mDataStore != null) {
-				Log.i(DEBUG_TAG, "Connecting with DataStore");
-				mClient = new MqttClient(url, mDeviceId, mDataStore);
-			} else {
-				Log.i(DEBUG_TAG, "Connecting with MemStore");
-				mClient = new MqttClient(url, mDeviceId, mMemStore);
-			}
-		} catch (MqttException e) {
-			e.printStackTrace();
-		}
+//		try {
+//			if (mDataStore != null) {
+//				Log.i(DEBUG_TAG, "Connecting with DataStore");
+//				mClient = new MqttClient(url, mDeviceId, mDataStore);
+//			} else {
+//				Log.i(DEBUG_TAG, "Connecting with MemStore");
+        mClient = MqttClientHelper.getInstance().createClient(url, mDeviceId, mMemStore);
+				 //new MqttClient(url, mDeviceId, mMemStore);
+//			}
+//		} catch (MqttException e) {
+//			e.printStackTrace();
+//		}
 	}
 
 	public int onStartCommand(Intent intent, int flags, int startId) {
@@ -359,26 +364,26 @@ public class MqttService extends Service implements MqttCallback {
 		connect();
 	}
 
-	@Override
-	public void deliveryComplete(MqttDeliveryToken arg0) {
+    @Override
+    public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
 
-	}
+    }
 
 	/**
 	 * 当连推送的消息送达的时候
 	 */
 	@Override
-	public void messageArrived(MqttTopic topic, MqttMessage message)
+	public void messageArrived(String topic, MqttMessage message)
 			throws Exception {
 		Log.i(DEBUG_TAG,
-				"  Topic:\t" + topic.getName() + "  Message:\t"
+				"  Topic:\t" + topic + "  Message:\t"
 						+ new String(message.getPayload()) + "  QoS:\t"
 						+ message.getQos());
 
 		Message msg = MSGHandler.obtainMessage();
 		Bundle b = new Bundle();
 		b.putString(SEND_MSG_KEY, new String(message.getPayload(), ENCODE));
-		b.putString(SEND_MSG_TOPIC, topic.getName());
+		b.putString(SEND_MSG_TOPIC, topic);
 
 		msg.setData(b);
 		msg.sendToTarget();

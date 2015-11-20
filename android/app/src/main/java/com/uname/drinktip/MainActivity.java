@@ -5,8 +5,10 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 
 import com.zsofware.androidMqttLib.activity.MqttActivity;
+import com.zsofware.androidMqttLib.client.MqttClientHelper;
 import com.zsofware.androidMqttLib.entry.SubscribeEntry;
 import com.zsofware.androidMqttLib.service.MqttService;
 
@@ -44,6 +46,11 @@ public class MainActivity extends MqttActivity {
             e.printStackTrace();
         }
         startService(intent);
+    }
+
+    public void onPublishButtonClicked(View v) {
+        Log.d(TAG, ">> " + MqttClientHelper.getInstance().getMqttClient().isConnected());
+        MqttClientHelper.getInstance().publish("Hiapache", "NiHao".getBytes(), 1);
     }
 
     @Override
