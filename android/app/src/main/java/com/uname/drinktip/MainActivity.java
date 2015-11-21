@@ -10,6 +10,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
+import android.widget.LinearLayout;
 
 import com.zsofware.androidMqttLib.activity.MqttActivity;
 import com.zsofware.androidMqttLib.client.MqttClientHelper;
@@ -22,6 +23,7 @@ public class MainActivity extends MqttActivity {
 
     private static final String TAG = MainActivity.class.getSimpleName() ;
     private Button drinkTipButton;
+    private LinearLayout tipsLayout;
     private ProgressDialog progressDialog;
 
     @Override
@@ -78,19 +80,27 @@ public class MainActivity extends MqttActivity {
         progressDialog.setMessage("Connecting...");
         progressDialog.setCancelable(true);
 
-        drinkTipButton = (Button) findViewById(R.id.drink_tip_button);
-        drinkTipButton.setVisibility(View.INVISIBLE);
+        tipsLayout = (LinearLayout) findViewById(R.id.tips_layout);
+        tipsLayout.setVisibility(View.INVISIBLE);
     }
 
     private void setViewOnMqttClientConnected() {
         progressDialog.dismiss();
-        drinkTipButton.setVisibility(View.VISIBLE);
-        drinkTipButton.startAnimation(AnimationUtils.loadAnimation(this, R.anim.alpha_anim));
+        tipsLayout.setVisibility(View.VISIBLE);
+        tipsLayout.startAnimation(AnimationUtils.loadAnimation(this, R.anim.alpha_anim));
     }
 
-    public void onDrinkTipButtonClicked(View v) {
+    public void onDrinkButtonClicked(View v) {
         Log.d(TAG, ">> " + MqttClientHelper.getInstance().getMqttClient().isConnected());
-        MqttClientHelper.getInstance().publish("Hiapache", "NiHao".getBytes(), 1);
+        MqttClientHelper.getInstance().publish("uname.drinktip", "d".getBytes(), 1);
+    }
+
+    public void onMissButtonClicked(View v) {
+        MqttClientHelper.getInstance().publish("uname.drinktip", "m".getBytes(), 1);
+    }
+
+    public void onRestButtonClicked(View v) {
+        MqttClientHelper.getInstance().publish("uname.drinktip", "r".getBytes(), 1);
     }
 
     @Override
