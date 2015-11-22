@@ -51,18 +51,20 @@ public class MqttClientHelper {
         return mqttClient;
     }
 
-    public boolean publish(String topic, byte[] payload, int qos) {
-        try {
-            mqttClient.publish(topic, payload, qos, false);
-            return true;
-        } catch (MqttException e) {
-            e.printStackTrace();
-        }
-
-        return false;
+    public void publish(final String topic, final byte[] payload, final int qos) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    mqttClient.publish(topic, payload, qos, false);
+                } catch (MqttException e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 
-    public boolean publish(String topic, String text) {
-        return publish(topic, text.getBytes(), 0);
+    public void publish(String topic, String text) {
+         publish(topic, text.getBytes(), 0);
     }
 }
