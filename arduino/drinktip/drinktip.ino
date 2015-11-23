@@ -42,6 +42,10 @@ int brightness = 0;
 int breathType = BREATH_IN;
 bool stopBreathFlag = true;
 
+char startCodes[] = {'A', 'P', 'A', 'C', 'H', 'E'};
+int index = 0;
+bool started = false;
+
 void setup()
 {
     Serial.begin(BAUD);
@@ -117,12 +121,22 @@ inline void serialHandler()
         return;
     }
     
-    if(!stopBreathFlag) {
-        while(mySerial.read() > 0);
+    char ch = mySerial.read();
+    if(!started) {
+        if(ch == startCodes[index]) {
+            if(++index == sizeof(startCodes)) {
+                started = true;
+                PLAY_SOUND();
+            }
+        } else {
+            index = 0;
+        }
+    } else {
+        if(!stopBreathFlag) {
+            while(mySerial.read() > 0);
+        }
+        protocolHandler(ch);
     }
-    
-    char cmd = mySerial.read();
-    protocolHandler(cmd);
 }
 
 void loop()
@@ -130,6 +144,7 @@ void loop()
     serialHandler();
     timer.update();
 }
+
 
 
 
