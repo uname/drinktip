@@ -3,6 +3,7 @@
 
 #define BAUD          9600
 #define PIN           5
+#define TONE_PIN      6
 #define PIXEL_NUM     3
 #define TIP_DURATION  10000
 
@@ -28,31 +29,56 @@ void setColor(uint32_t color)
 
 void setup()
 {
+    Serial.begin(BAUD);
     mySerial.begin(BAUD);
     pixels.begin();
     pixels.show();
 }
 
-inline void serialHandler()
+inline void playSound()
 {
-    if(mySerial.available() < 1) {
-        return;
+    for(int i = 0; i < 180; i++) {
+        tone(TONE_PIN, 900 + sin(i * 3.1412 / 180) * 1800, 10);
+        delay(2);
     }
-    char cmd = mySerial.read();
-    lastTime = millis();
+}
+
+inline void protocolHandler(char cmd)
+{
+    bool rightCmd = true;
+    
     switch(cmd) {
     case DRINK_CMD:
         setColor(DRINK_COLOR);
         break;
+        
     case MISS_CMD:
         setColor(MISS_COLOR);
         break;
+        
     case REST_CMD:
         setColor(REST_COLOR);
         break;
+        
     default:
+        rightCmd = false;
         break;
     }
+    
+    if(rightCmd) {
+        playSound();
+    }
+}
+
+inline void serialHandler()
+{
+    if(Serial.available() < 1) {
+        return;
+    }
+    
+    char cmd = Serial.read();
+    lastTime = millis();
+    protocolHandler(cmd);
 }
 
 void loop()
