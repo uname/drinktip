@@ -1,5 +1,6 @@
 #include <SoftwareSerial.h>
 #include <Adafruit_NeoPixel.h>
+#include <Timer.h>
 
 #define BAUD          9600
 #define PIN           5
@@ -7,6 +8,7 @@
 #define PIXEL_NUM     3
 #define TIP_DURATION  10000
 
+#define TEST_CMD     't'
 #define DRINK_CMD    'd'
 #define MISS_CMD     'm'
 #define REST_CMD     'r'
@@ -14,18 +16,31 @@
 #define MISS_COLOR   0x00FF0000
 #define REST_COLOR   0x00FF00CC
 
+#define BREATH_IN    1
+#define BREATH_OUT   -1
+
+#define SET_COLOR(COLOR) do { \
+        for(int i = 0; i < PIXEL_NUM; i++) { \
+            pixels.setPixelColor(i, COLOR); \
+        } \
+        pixels.show(); \
+    }while(0)
+        
+#define PLAY_SOUND() do { \
+        for(int i = 0; i < 180; i++) { \
+            tone(TONE_PIN, 900 + sin(i * 3.14 / 180) * 1800, 10); \
+            delay(2); \
+        } \
+    }while(0)
+
 SoftwareSerial mySerial(2, 3); // RX, TX
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(PIXEL_NUM, PIN, NEO_GRB + NEO_KHZ800);
-uint32_t lastTime = 0;
-
-void setColor(uint32_t color)
-{
-    pixels.setBrightness(255);
-    for(int i = 0; i < PIXEL_NUM; i++) {
-        pixels.setPixelColor(i, color);
-    }
-    pixels.show();
-}
+Timer timer;
+uint32_t color;
+int8_t breathTimerId;
+int brightness = 0;
+int breathType = BREATH_IN;
+bool stopBreathFlag = true;
 
 void setup()
 {
@@ -35,12 +50,26 @@ void setup()
     pixels.show();
 }
 
-inline void playSound()
+void breathLight()
 {
-    for(int i = 0; i < 180; i++) {
-        tone(TONE_PIN, 900 + sin(i * 3.1412 / 180) * 1800, 10);
-        delay(2);
+    pixels.setBrightness(brightness);
+    brightness += breathType;
+    SET_COLOR(color);
+    if(brightness > 255) {
+        breathType = BREATH_OUT;
+        brightness = 255;
+    } else if(brightness < 0) {
+        if(stopBreathFlag) {
+            timer.stop(breathTimerId);
+        }
+        breathType = BREATH_IN;
+        brightness = 0;
     }
+}
+
+void stopBreathLight()
+{
+    stopBreathFlag = true;   
 }
 
 inline void protocolHandler(char cmd)
@@ -49,15 +78,20 @@ inline void protocolHandler(char cmd)
     
     switch(cmd) {
     case DRINK_CMD:
-        setColor(DRINK_COLOR);
+        color = DRINK_COLOR;
         break;
         
     case MISS_CMD:
-        setColor(MISS_COLOR);
+        color = MISS_COLOR;
         break;
         
     case REST_CMD:
-        setColor(REST_COLOR);
+        color = REST_COLOR;
+        break;
+        
+    case TEST_CMD:
+        PLAY_SOUND();
+        goto End;
         break;
         
     default:
@@ -66,28 +100,36 @@ inline void protocolHandler(char cmd)
     }
     
     if(rightCmd) {
-        playSound();
+        stopBreathFlag = false;
+        breathTimerId = timer.every(5, breathLight);
+        timer.after(TIP_DURATION, stopBreathLight);
+        PLAY_SOUND();
     }
+
+End:
+    // DO NOTHING NOW
+    (void)0;
 }
 
 inline void serialHandler()
 {
-    if(Serial.available() < 1) {
+    if(mySerial.available() < 1) {
         return;
     }
     
-    char cmd = Serial.read();
-    lastTime = millis();
+    if(!stopBreathFlag) {
+        while(mySerial.read() > 0);
+    }
+    
+    char cmd = mySerial.read();
     protocolHandler(cmd);
 }
 
 void loop()
 {
-    uint32_t t = millis();
-    if(lastTime != 0 &&  t - lastTime > TIP_DURATION) {
-        pixels.setBrightness(0);
-        pixels.show();
-        lastTime = t;
-    }
     serialHandler();
+    timer.update();
 }
+
+
+
